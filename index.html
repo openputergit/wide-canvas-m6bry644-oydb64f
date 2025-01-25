@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-[#4A90A7] min-h-screen font-['Inter']">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-semibold text-gray-800 mb-2">Voice Assistant</h1>
+                <p class="text-gray-600">Ask me anything!</p>
+            </div>
+
+            <div class="chat-container h-64 overflow-y-auto mb-4 p-4 bg-gray-50 rounded-lg" id="chatContainer">
+                <div class="welcome-message text-center text-gray-500">
+                    <i class="bi bi-robot text-4xl mb-2"></i>
+                    <p>Hey there! Click the microphone to start speaking</p>
+                </div>
+            </div>
+
+            <div class="flex justify-center items-center gap-4">
+                <button id="startBtn" class="p-4 rounded-full bg-[#4A90A7] hover:bg-[#3a7285] transition-colors">
+                    <i class="bi bi-mic-fill text-white text-2xl"></i>
+                </button>
+                <button id="stopBtn" class="p-4 rounded-full bg-red-500 hover:bg-red-600 transition-colors hidden">
+                    <i class="bi bi-stop-fill text-white text-2xl"></i>
+                </button>
+            </div>
+
+            <div id="status" class="text-center mt-4 text-sm text-gray-600"></div>
+        </div>
+    </div>
+
+    <script>
+        class VoiceAssistant {
+            constructor() {
+                this.recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                this.synthesis = window.speechSynthesis;
+                this.isListening = false;
+                this.setupRecognition();
+                this.setupUI();
+            }
+
+            setupRecognition() {
+                this.recognition.continuous = true;
+                this.recognition.interimResults = true;
+                this.recognition.lang = 'en-US';
+
+                this.recognition.onresult = (event) => {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+
+                    if (event.results[0].isFinal) {
+                        this.addMessage('user', transcript);
+                        this.processQuery(transcript);
+                    }
+                };
+
+                this.recognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    this.updateStatus('Error: ' + event.error);
+                };
+            }
+
+            setupUI() {
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.chatContainer = document.getElementById('chatContainer');
+                this.status = document.getElementById('status');
+
+                this.startBtn.addEventListener('click', () => this.startListening());
+                this.stopBtn.addEventListener('click', () => this.stopListening());
+            }
+
+            startListening() {
+                try {
+                    this.recognition.start();
+                    this.isListening = true;
+                    this.startBtn.classList.add('hidden');
+                    this.stopBtn.classList.remove('hidden');
+                    this.updateStatus('Listening...');
+                } catch (error) {
+                    console.error('Error starting recognition:', error);
+                }
+            }
+
+            stopListening() {
+                this.recognition.stop();
+                this.isListening = false;
+                this.startBtn.classList.remove('hidden');
+                this.stopBtn.classList.add('hidden');
+                this.updateStatus('');
+            }
+
+            updateStatus(message) {
+                this.status.textContent = message;
+            }
+
+            addMessage(type, text) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `mb-4 ${type === 'user' ? 'text-right' : 'text-left'}`;
+                
+                const bubble = document.createElement('div');
+                bubble.className = `inline-block p-3 rounded-lg ${
+                    type === 'user' 
+                        ? 'bg-[#4A90A7] text-white'
+                        : 'bg-gray-200 text-gray-800'
+                }`;
+                bubble.textContent = text;
+                
+                messageDiv.appendChild(bubble);
+                this.chatContainer.appendChild(messageDiv);
+                this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+            }
+
+            speak(text) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                this.synthesis.speak(utterance);
+            }
+
+            processQuery(query) {
+                let response = "I'm sorry, I don't understand that question.";
+                
+                // Simple response logic
+                if (query.toLowerCase().includes('hello') || query.toLowerCase().includes('hi')) {
+                    response = "Hello! How can I help you today?";
+                } else if (query.toLowerCase().includes('how are you')) {
+                    response = "I'm doing well, thank you for asking!";
+                } else if (query.toLowerCase().includes('time')) {
+                    response = `The current time is ${new Date().toLocaleTimeString()}`;
+                } else if (query.toLowerCase().includes('weather')) {
+                    response = "I'm sorry, I don't have access to weather information right now.";
+                }
+
+                this.addMessage('assistant', response);
+                this.speak(response);
+            }
+        }
+
+        // Initialize the voice assistant when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+                new VoiceAssistant();
+            } else {
+                alert('Speech recognition is not supported in this browser.');
+            }
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
